@@ -1,0 +1,95 @@
+# Coe Fcitx5 Module
+
+This directory contains the thin Fcitx5 module for Coe.
+
+Current scope:
+
+- registers as a Fcitx5 module
+- watches key events in `PreInputMethod`
+- reads the trigger key from Coe over session D-Bus
+- reads the trigger mode from Coe over session D-Bus
+- falls back to `Shift+Super+D` if Coe is unavailable during module init
+- calls `Toggle()` in `toggle` mode
+- calls `Start()` on press and `Stop()` on release in `hold` mode
+- cancels the current recording when `Escape` is pressed during `recording`
+- subscribes to `StateChanged` / `ResultReady` / `ErrorRaised` over session D-Bus
+- dispatches the result back to the Fcitx main event loop
+- shows a small Fcitx panel hint while Coe is listening or processing
+- commits the final text to the current focused input context
+- can replace selected text through voice editing when the current input context exposes a non-empty selection through Fcitx surrounding text
+
+Trigger mode is configured through Coe:
+
+```yaml
+hotkey:
+  trigger_mode: toggle
+```
+
+Supported values:
+
+- `toggle`: press once to start recording, press again to stop and process
+- `hold`: press to start recording, release to stop and process
+
+`hold` only takes effect when `runtime.mode: fcitx`.
+
+It does not do these things yet:
+
+- clipboard fallback when no input context exists at commit time
+- selected-text voice editing in controls that do not expose a non-empty selection to Fcitx; in those cases Coe falls back to normal dictation
+
+## Build
+
+```bash
+./scripts/build-fcitx-module.sh
+```
+
+## Install
+
+For release installs, use:
+
+```bash
+./scripts/install.sh
+```
+
+If `fcitx5` is installed, that script prefers the Fcitx path automatically and
+installs the module into the system addon directory. Use `--fcitx` to force
+that path, or `--gnome` if you want the GNOME desktop path instead.
+
+For local development, build with:
+
+```bash
+./scripts/build-fcitx-module.sh --system
+sudo cmake --install /tmp/coe-fcitx5-build
+```
+
+## Hotkey
+
+The module does not keep its own hotkey file. It reads the trigger from Coe
+over D-Bus, so the single source of truth is still:
+
+- `~/.config/coe/config.yaml`
+
+Example:
+
+```yaml
+hotkey:
+  preferred_accelerator: <Shift><Super>d
+```
+
+In `runtime.mode: fcitx`, the module converts that GNOME-style accelerator to
+the Fcitx key format internally.
+
+Set this in `~/.config/coe/config.yaml` before testing the module:
+
+```yaml
+runtime:
+  mode: fcitx
+```
+
+The install script will try to restart Fcitx5 with:
+
+```bash
+fcitx5 -rd
+```
+
+If that does not pick up the new module, log out and back in.

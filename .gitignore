@@ -1,0 +1,39 @@
+.env
+__pycache__/
+temp/
+Sessions/
+
+# Virtual Environments
+.venv/
+venv/
+ENV/
+env/
+
+# Audio and Media files
+sounds/
+*.mp3
+*.wav
+*.ogg
+*.m4a
+*.flac
+*.aac
+*.opus
+*.wma
+*.mp4
+*.mkv
+*.avi
+*.mov
+*.webm
+*.aiff
+*.alac
+*.amr
+*.m4b
+*.m4p
+*.webm
+*.wav
+
+# Obsidian config/state directories
+.obsidian/
+or.md
+
+

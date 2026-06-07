@@ -1,0 +1,67 @@
+# =============================================================================
+# AudioSRS F5-TTS & Gemini LLM Configuration
+# =============================================================================
+# This config drives pipeline_v6_f5tts.py
+# TOML format: easier to read, supports comments natively.
+# =============================================================================
+
+# ── API Key ─────────────────────────────────────────────────────────────────
+gemini_key_env = "AIzaSyD9IYn-fH9iykO-3TGkiZ3YjiFp275THIs"
+
+# ── LLM Settings (sentence_cn + distractors) ──────────────────────────────
+gemini_model_llm = "gemini-3.1-flash-lite-preview"
+llm_temperature = 0.3
+llm_retries = 5
+llm_backoff = 2
+llm_batch_size = 5
+# Old short prompt (commented out):
+# llm_prompt_template = """You are a Chinese teacher. Return JSON: each key is word ID, value has "sentence_cn" and "distractors": [wrong1, wrong2, wrong3] — three WRONG Spanish meanings.
+# Rules for sentence_cn:
+# - Natural Chinese sentence including hanzi.
+# - Distractors must be plausible but incorrect. No correct meaning or synonyms.
+# ONLY JSON, no markdown.
+# 
+# {lines}"""
+
+# New Rich-Context Prompt:
+llm_prompt_template = """You are a Chinese teacher. Return JSON: each key is word ID, value has "sentence_cn" and "distractors": [wrong1, wrong2, wrong3] — three WRONG Spanish meanings.
+Rules for sentence_cn:
+- The sentence must be 1-2 clauses only.
+- Include at least ONE context hint: a synonym, a contrast (opposite behavior), or a consequence.
+- The target word should feel natural, not forced.
+- Do NOT define the word, just show it in context.
+ONLY JSON, no markdown.
+
+
+{lines}"""
+llm_fallback_template = "Return ONLY JSON: {{\"{sid}\": {{\"sentence_cn\":\"...\",\"distractors\":[\"x\",\"y\",\"z\"]}}}}\nWord: {hanzi} | Meaning: {meanings} | Pinyin: {pinyin}\nRules: sentence MUST include \"{hanzi}\". Distractors are WRONG Spanish meanings."
+
+# ── F5-TTS Settings (Local Audio Generation) ───────────────────────────────
+# f5_ref_audio = "voices/voice-m-03.wav"
+
+# f5_ref_audio = "voices/voice-f-01.wav"
+# f5_ref_audio = "voices/voice-f-02.wav"
+# f5_ref_audio = "voices/voice-f-03.wav"
+# f5_ref_audio = "voices/voice-f-04.wav"
+# f5_ref_audio = "voices/voice-f-05.wav"
+# ───────────────────────────────────────────────────────────────────────────
+# f5_ref_audio = "voices/voice-m-01.wav"
+# f5_ref_audio = "voices/voice-m-02.wav"
+# f5_ref_audio = "voices/voice-m-03.wav"
+# f5_ref_audio = "voices/voice-m-04.wav"
+# f5_ref_audio = "voices/voice-m-05.wav"
+f5_ref_audio = "voices/voice-m-06.wav"
+# f5_ref_audio = "voices/voice-m-07.wav"
+
+
+f5_ref_text = "想象一下在柏林的科技公司会议室，首席工程师指着屏幕上的数据说服务器必须立刻重启"
+word_prompt_prefix = ""
+word_prompt_suffix = ""
+sent_prompt_prefix = ""
+sent_prompt_suffix = ""
+sample_rate = 24000
+mp3_bitrate = "128k"
+
+# ── Paths ─────────────────────────────────────────────────────────────────
+audio_dir = "audio"
+sent_dir = "sentences"

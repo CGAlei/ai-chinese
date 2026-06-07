@@ -1,0 +1,239 @@
+# Runtime behavior.
+runtime:
+  # Runtime mode.
+  # `desktop` keeps the current GNOME-first desktop flow.
+  # `fcitx` disables the GNOME fallback shortcut path and expects the Fcitx5 module
+  # to drive dictation over D-Bus instead.
+  mode: fcitx
+  # Target desktop profile. Today this project is GNOME-first.
+  target_desktop: gnome
+  # Log verbosity: debug, info, warn, error.
+  log_level: info
+
+# Hotkey metadata. This describes the intended shortcut, even when GNOME
+# currently falls back to a custom command instead of a true global shortcut.
+hotkey:
+  # Display name used when Coe ensures a GNOME custom shortcut entry.
+  name: coe-trigger
+  # Preferred accelerator. On GNOME fallback, Coe will try to register this
+  # binding as a custom shortcut that runs `coe trigger toggle`.
+  preferred_accelerator: <Shift><Super>d
+  # Trigger semantics used by the Fcitx5 module when runtime.mode is `fcitx`.
+  # `toggle`: press once to start, press again to stop.
+  # `hold`: press to start, release to stop.
+  # When runtime.mode is `desktop`, Coe still behaves as toggle.
+  trigger_mode: toggle
+
+# Local microphone capture settings.
+audio:
+  # Recorder binary used to capture raw PCM from PipeWire.
+  recorder_binary: pw-record
+  # Sample rate sent to the ASR pipeline.
+  sample_rate: 16000
+  # Channel count. The current pipeline expects mono audio.
+  channels: 1
+  # PCM sample format written by the recorder.
+  format: s16
+
+# Automatic speech recognition provider.
+asr:
+  # ASR provider name.
+  # Use `openai` for cloud ASR.
+  # Use `doubao` for Doubao cloud ASR.
+  # Use `sensevoice` for an external SenseVoice FastAPI service.
+  # Use `whispercpp` for local ASR through `whisper-cli`.
+  # Use `voxtype` for local ASR through `voxtype transcribe`.
+  # Use `qwen3-asr-vllm` for OpenAI-compatible vLLM chat completions
+  # with inline base64 WAV audio.
+  provider: openai
+  # Full HTTP endpoint for HTTP-based ASR providers.
+  # For `sensevoice`, leaving this empty falls back to http://127.0.0.1:50000/api/v1/asr.
+  # For `doubao`, leaving this empty falls back to
+  # https://openspeech.bytedance.com/api/v3/auc/bigmodel/recognize/flash.
+  # For `qwen3-asr-vllm`, leaving this empty falls back to
+  # http://127.0.0.1:8000/v1/chat/completions.
+  endpoint: https://api.openai.com/v1/audio/transcriptions
+  # ASR model name.
+  model: gpt-4o-mini-transcribe
+  # Optional engine selector for wrapper-style providers.
+  # For `voxtype`, this maps to `voxtype transcribe --engine ...`.
+  # Leave empty to use voxtype's own config default.
+  engine: ""
+
+  # Language hint. Use `auto` or leave it empty to rely on auto-detection.
+  language: zh
+  # Optional Go text/template prompt passed to the ASR backend.
+  # Available fields: .Provider, .Model, .Language
+  prompt: ""
+  # Optional template file path. Relative paths are resolved from this config file.
+  # If set, this takes precedence over `prompt`.
+  prompt_file: ""
+  # Optional ASR API key stored directly in this config file.
+  api_key: ""
+  # Environment variable that stores the ASR API key when `api_key` is empty.
+  api_key_env: OPENAI_API_KEY
+  # Timeout in seconds for HTTP-based ASR calls.
+  # Use a positive value; <= 0 falls back to the default (60).
+  timeout_seconds: 60
+  # Executable name or absolute path for local CLI providers.
+  # Leave empty to use the provider default (`whisper-cli` for `whispercpp`,
+  # `voxtype` for `voxtype`).
+  # For `voxtype`, this can point to a wrapper script when you need custom flags.
+  binary: ""
+  # Absolute path to the local Whisper model file, used by `whispercpp`.
+  model_path: ""
+  # Number of CPU threads for local inference, used by `whispercpp`.
+  # `0` means auto.
+  threads: 0
+  # Whether to allow GPU acceleration in the local CLI, used by `whispercpp`.
+  # `false` adds `--no-gpu`.
+  use_gpu: false
+
+# LLM cleanup / punctuation pass.
+llm:
+  # LLM provider name. Use `openai` for cleanup or `stub` to disable it.
+  provider: openai
+  # OpenAI-compatible API shape used for cleanup.
+  # `responses` calls the Responses API.
+  # `chat` calls the Chat Completions API through `uniai`.
+  endpoint_type: chat
+  # HTTP endpoint for the cleanup request.
+  # For `responses`, use the full responses endpoint.
+  # For `chat`, use either a `/v1` base URL or a full `/v1/chat/completions` URL.
+  endpoint: https://api.openai.com/v1
+  # Cleanup model name.
+  model: gpt-4o-mini
+  # Optional cleanup API key stored directly in this config file.
+  api_key: ""
+  # Environment variable that stores the cleanup API key when `api_key` is empty.
+  api_key_env: OPENAI_API_KEY
+  # Timeout in seconds for LLM cleanup calls.
+  # Use a positive value; <= 0 falls back to the default (45).
+  timeout_seconds: 45
+  # Optional Go text/template correction instructions.
+  # Available fields: .Provider, .Model, .EndpointType
+  prompt: ""
+  # Optional template file path. Relative paths are resolved from this config file.
+  # If set, this takes precedence over `prompt`.
+  prompt_file: ""
+
+# Personal dictionary used during LLM correction and post-correction normalization.
+dictionary:
+  # Optional YAML file path. Relative paths are resolved from this config file.
+  # `coe config init` creates `./dictionary.yaml` with starter entries.
+  file: "./dictionary.yaml"
+
+# Clipboard and paste behavior.
+output:
+  # Try to paste automatically after writing the final text.
+  enable_auto_paste: true
+  # Default paste shortcut for regular GUI text fields.
+  paste_shortcut: ctrl+v
+  # Paste shortcut to use when the focused target looks like a terminal.
+  terminal_paste_shortcut: ctrl+shift+v
+  # Query a GNOME Shell extension over D-Bus to inspect the focused app.
+  # When enabled, Coe can switch to the terminal paste shortcut automatically.
+  use_gnome_focus_helper: true
+  # Persist portal authorization when the desktop backend supports it.
+  persist_portal_access: true
+  # Command-line clipboard fallback used when portal clipboard is unavailable.
+  clipboard_binary: wl-copy
+  # Command-line paste fallback. Empty means no command fallback.
+  paste_binary: ""
+
+# Desktop notification behavior.
+notifications:
+  # Send failure notifications through org.freedesktop.Notifications.
+  enable_system: true
+  # Notify when dictation finishes, including the corrected text. Default is false to avoid post-dictation noise.
+  notify_on_complete: false
+  # Notify when recording starts. Usually too noisy, so default is false.
+  notify_on_recording_start: false
+
+# Example local ASR profile:
+#
+# asr:
+#   provider: whispercpp
+#   endpoint: ""
+#   model: ""
+#   language: zh
+#   prompt: ""
+#   api_key: ""
+#   api_key_env: ""
+#   binary: whisper-cli
+#   model_path: /absolute/path/to/ggml-base.bin
+#   threads: 4
+#   use_gpu: false
+#
+# Example SenseVoice FastAPI profile:
+#
+# asr:
+#   provider: sensevoice
+#   endpoint: http://127.0.0.1:50000/api/v1/asr
+#   model: ""
+#   language: auto
+#   prompt: ""
+#   api_key: ""
+#   api_key_env: ""
+#   binary: ""
+#   model_path: ""
+#   threads: 0
+#   use_gpu: false
+#
+# Example voxtype profile:
+#
+# asr:
+#   provider: voxtype
+#   engine: omnilingual
+#   binary: ""
+#
+# Example qwen3-asr-vllm profile:
+#
+# asr:
+#   provider: qwen3-asr-vllm
+#   endpoint: http://127.0.0.1:8000/v1/chat/completions
+#   model: Qwen/Qwen3-ASR-1.7B
+#   language: ""
+#   prompt: ""
+#   api_key: ""
+#   api_key_env: OPENAI_API_KEY
+#
+# Example focus-aware paste on GNOME:
+#
+# runtime:
+#   mode: desktop
+#   target_desktop: gnome
+#   log_level: info
+#
+# output:
+#   enable_auto_paste: true
+#   paste_shortcut: ctrl+v
+#   terminal_paste_shortcut: ctrl+shift+v
+#   use_gnome_focus_helper: true
+#   persist_portal_access: true
+#   clipboard_binary: wl-copy
+#   paste_binary: ""
+#
+# Example fast mode without LLM cleanup:
+#
+# llm:
+#   provider: stub
+#   endpoint_type: chat
+#   endpoint: ""
+#   model: ""
+#   api_key: ""
+#   api_key_env: ""
+#   prompt: ""
+#
+# Example Fcitx5 module mode:
+#
+# runtime:
+#   mode: fcitx
+#   target_desktop: gnome
+#   log_level: info
+#
+# The Fcitx5 module reads this same hotkey over D-Bus and converts it
+# internally to Fcitx key syntax.
+#
+# hotkey:
+#   trigger_mode: toggle

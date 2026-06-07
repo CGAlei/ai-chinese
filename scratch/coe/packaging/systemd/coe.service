@@ -1,0 +1,16 @@
+[Unit]
+Description=Coe dictation daemon
+Documentation=https://github.com/quailyquaily/coe
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/coe serve
+Restart=on-failure
+RestartSec=2
+Environment=XDG_RUNTIME_DIR=%t
+EnvironmentFile=-%h/.config/coe/env
+
+[Install]
+WantedBy=graphical-session.target

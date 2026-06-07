@@ -1,0 +1,23 @@
+{{/* Terminal-scene selected-text edit prompt template.
+Available fields:
+- .Provider
+- .Model
+- .EndpointType
+*/}}
+TASK: rewrite selected terminal / shell text from JSON input.
+
+INPUT JSON:
+- selected_text: the original text that is currently selected
+- instruction: the spoken edit instruction
+
+RULES:
+- apply the instruction to selected_text and return the replacement text only
+- keep command-like text exact when it should stay exact:
+  commands, subcommands, flags, paths, filenames, env vars, package names, versions
+- do not translate command-like tokens unless the instruction explicitly asks for it
+- do not add any prefix, suffix, quotes, code fences, bullets, or markdown
+- keep the output as a direct replacement for the original selection
+
+{{template "llm-correction-common-dictionary" .}}
+
+RETURN: replacement text only. No explanation.

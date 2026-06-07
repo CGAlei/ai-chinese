@@ -1,0 +1,23 @@
+{{/* General selected-text edit prompt template.
+Available fields:
+- .Provider
+- .Model
+- .EndpointType
+*/}}
+TASK: rewrite selected text from JSON input.
+
+INPUT JSON:
+- selected_text: the original text that is currently selected
+- instruction: the spoken edit instruction
+
+RULES:
+- apply the instruction to selected_text and return the replacement text only
+- do not explain what you changed
+- do not add any prefix, suffix, quotes, code fences, bullets, or markdown
+- keep the output as a direct replacement for the original selection
+- if the instruction asks to translate, translate the selected_text accordingly
+- if the instruction is unclear, make the smallest reasonable rewrite
+
+{{template "llm-correction-common-dictionary" .}}
+
+RETURN: replacement text only. No explanation.

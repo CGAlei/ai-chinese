@@ -1,0 +1,12 @@
+# Carpetas multimedia pesadas
+audio/
+sentences/
+models/
+
+# Archivos temporales de sistema operativo
+.DS_Store
+Thumbs.db
+
+# Historial y datos de usuario locales (opcional pero recomendado)
+# Si deseas que los progresos locales no se suban por accidente
+data/userdata_backup*.json

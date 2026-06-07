@@ -1,0 +1,22 @@
+# --- Offline Transcription Dependencies (Heavy) ---
+# WhisperX for precise offline transcription
+# Note: WhisperX sometimes requires PyTorch with correct CUDA bindings first.
+git+https://github.com/m-bain/whisperx.git
+torch
+torchaudio
+
+# --- Text Processing ---
+# Jieba for Chinese word segmentation
+jieba>=0.42.1
+
+# OpenCC for Traditional to Simplified Chinese conversion
+opencc-python-reimplemented>=0.1.7
+
+# --- Online Transcription & Dictionary ---
+# OpenAI API client for --online mode transcription
+openai>=1.0.0
+
+# Requests and BeautifulSoup for enrich_dict.py web scraping capabilities
+requests>=2.25.1
+beautifulsoup4>=4.9.3
+python-dotenv>=1.0.0
