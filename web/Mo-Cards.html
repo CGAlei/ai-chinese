@@ -1380,7 +1380,18 @@ async function updateStorageStat() {
 
 async function processJSON(raw) {
   try {
-    const parsed = JSON.parse(raw);
+    let parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && Array.isArray(parsed.words)) {
+      parsed = parsed.words;
+    }
+    if (Array.isArray(parsed) && parsed.length > 0 && !Array.isArray(parsed[0]) && typeof parsed[0] === 'object') {
+      parsed = parsed.map(function(e) {
+        var hanzi = e.w || e.word || e.hanzi || e.chinese || '';
+        var meaning = e.m || e.meaning || e.es || e.spanish || '';
+        return [hanzi, meaning];
+      });
+    }
+
     if (!Array.isArray(parsed)) throw new Error();
     State.dictionary = parsed.filter(d => Array.isArray(d) && d.length >= 2);
     if (State.dictionary.length === 0) throw new Error();
@@ -1389,20 +1400,20 @@ async function processJSON(raw) {
     let newWords = 0;
     for (const [hanzi, meaning] of State.dictionary) {
       const existing = await MoDB.getWord(hanzi);
-      if (!existing) {
+      if (!existing || existing.meaning !== meaning) {
         await MoDB.putWord({
           id: hanzi,
           hanzi,
-          pinyin: MoPinyin.getToned(hanzi),
-          pinyinToneless: MoPinyin.getToneless(hanzi),
+          pinyin: existing ? existing.pinyin : MoPinyin.getToned(hanzi),
+          pinyinToneless: existing ? existing.pinyinToneless : MoPinyin.getToneless(hanzi),
           meaning,
-          source: 'cards_import',
-          enriched: false,
+          source: existing ? existing.source : 'cards_import',
+          enriched: existing ? existing.enriched : false,
         });
         newWords++;
       }
     }
-    if (newWords > 0) console.log(`[MoCards] Imported ${newWords} new words into MoDB`);
+    if (newWords > 0) console.log(`[MoCards] Imported/Updated ${newWords} words in MoDB`);
 
     const badge = document.getElementById('word-count-badge');
     if(badge) {
