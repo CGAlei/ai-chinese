@@ -26,7 +26,6 @@ dependencies = [
     "pydub>=0.25.1",
     
     # Remote git & local path dependencies
-    "whisperx",
     "f5-tts",
     "qwen-asr",
 ]
@@ -48,8 +47,7 @@ url = "https://download.pytorch.org/whl/cpu"
 explicit = true
 
 [tool.uv.sources]
-f5-tts = { path = "./F5TTSreader", editable = true }
-whisperx = { git = "https://github.com/m-bain/whisperx.git" }
+f5-tts = { path = "./pipelines/f5tts-reader", editable = true }
 torch = [
   { index = "pytorch-cu128", marker = "platform_system == 'Linux' and platform_machine == 'x86_64'" },
   { index = "pytorch-cpu", marker = "platform_system != 'Linux' or platform_machine != 'x86_64'" }

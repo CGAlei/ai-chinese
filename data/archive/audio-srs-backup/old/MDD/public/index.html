@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f1117" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="description" content="Mandarin MDD — Mispronunciation Detection & Diagnosis for non-native Mandarin learners" />
+  <title>普通话 MDD — Pronunciation Coach</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@400;700&display=swap"
+    rel="stylesheet"
+  />
+
+  <!-- Tailwind CDN (v3) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans:   ['Inter', 'system-ui', 'sans-serif'],
+            hanzi:  ['Noto Serif SC', 'serif'],
+          },
+          colors: {
+            brand: {
+              50:  '#f0f4ff',
+              100: '#dde6ff',
+              200: '#c4d0fe',
+              400: '#818cf8',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            },
+            surface: {
+              900: '#0f1117',
+              800: '#161820',
+              700: '#1e2130',
+              600: '#252840',
+              500: '#2d3154',
+            }
+          },
+        },
+      },
+    };
+  </script>
+
+  <style>
+    /* ── Base & Globals ─────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: #0f1117;
+      color: #e2e8f0;
+      font-family: 'Inter', system-ui, sans-serif;
+      min-height: 100dvh;
+      overflow-x: hidden;
+    }
+
+    /* ── Ruby / Pinyin layer ────────────────────────────────── */
+    ruby {
+      display: inline-flex;
+      flex-direction: column-reverse;
+      align-items: center;
+      line-height: 1;
+      vertical-align: bottom;
+    }
+    rt {
+      font-size: 0.55em;
+      font-family: 'Inter', sans-serif;
+      font-weight: 500;
+      color: #818cf8;
+      letter-spacing: 0.05em;
+      opacity: 0;
+      transform: translateY(4px);
+      transition: opacity 0.25s ease, transform 0.25s ease;
+      white-space: nowrap;
+    }
+    ruby.show-pinyin rt {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    /* Failed word highlight */
+    ruby.word-fail > span { color: #f87171; }
+    ruby.word-fail rt     { color: #f87171; }
+    /* Passed word highlight */
+    ruby.word-pass > span { color: #34d399; }
+    ruby.word-pass rt     { color: #34d399; }
+    /* Omitted/Skipped word highlight */
+    ruby.word-omit > span { color: #94a3b8; }
+
+    /* ── Pinyin toggle button active state ──────────────────── */
+    #btn-pinyin-toggle.active {
+      background: rgba(99, 102, 241, 0.2);
+      color: #a5b4fc;
+      border: 1px solid rgba(129, 140, 248, 0.4);
+    }
+
+    /* ── Hanzi text ─────────────────────────────────────────── */
+    .hanzi-char {
+      font-family: 'Noto Serif SC', serif;
+      font-size: clamp(2rem, 8vw, 3.5rem);
+      line-height: 1.1;
+      display: inline-block;
+      transition: color 0.3s ease;
+    }
+    .sentence-display {
+      font-family: 'Noto Serif SC', serif;
+      font-size: clamp(1.4rem, 5vw, 2.2rem);
+      line-height: 1.6;
+      letter-spacing: 0.05em;
+    }
+
+    /* ── Glass card ─────────────────────────────────────────── */
+    .glass {
+      background: rgba(30, 33, 48, 0.7);
+      backdrop-filter: blur(16px) saturate(180%);
+      -webkit-backdrop-filter: blur(16px) saturate(180%);
+      border: 1px solid rgba(129, 140, 248, 0.12);
+    }
+
+    /* ── Glow button ─────────────────────────────────────────── */
+    .btn-glow {
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .btn-glow:active { transform: scale(0.96); }
+    .btn-glow::after {
+      content: '';
+      position: absolute;
+      inset: -2px;
+      border-radius: inherit;
+      background: conic-gradient(from 180deg, #6366f1, #818cf8, #6366f1);
+      opacity: 0;
+      transition: opacity 0.3s;
+      z-index: -1;
+    }
+    .btn-glow:hover::after { opacity: 1; }
+
+    /* ── Record button ───────────────────────────────────────── */
+    @keyframes pulse-ring {
+      0%   { transform: scale(1);   opacity: 0.6; }
+      100% { transform: scale(1.5); opacity: 0; }
+    }
+    .record-pulse::before {
+      content: '';
+      position: absolute;
+      inset: -6px;
+      border-radius: 50%;
+      border: 2px solid #ef4444;
+      animation: pulse-ring 1s ease-out infinite;
+    }
+
+    /* ── Score bar ───────────────────────────────────────────── */
+    .score-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #4f46e5, #818cf8);
+      transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    /* ── Toast notification ─────────────────────────────────── */
+    @keyframes toast-in {
+      from { transform: translateY(20px); opacity: 0; }
+      to   { transform: translateY(0);    opacity: 1; }
+    }
+    .toast {
+      animation: toast-in 0.3s ease forwards;
+    }
+
+    /* ── Card flip animations ────────────────────────────────── */
+    @keyframes card-in {
+      from { opacity: 0; transform: translateY(12px) scale(0.98); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .card-animate { animation: card-in 0.4s ease forwards; }
+
+    /* ── Shimmer loading state ──────────────────────────────── */
+    @keyframes shimmer {
+      0%   { background-position: -400px 0; }
+      100% { background-position: 400px 0; }
+    }
+    .shimmer {
+      background: linear-gradient(90deg, #1e2130 25%, #252840 50%, #1e2130 75%);
+      background-size: 800px 100%;
+      animation: shimmer 1.5s infinite;
+    }
+
+    /* ── Status bar ─────────────────────────────────────────── */
+    .status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 6px;
+    }
+    .status-dot.online  { background: #34d399; box-shadow: 0 0 6px #34d399; }
+    .status-dot.offline { background: #f87171; box-shadow: 0 0 6px #f87171; }
+    .status-dot.demo    { background: #fbbf24; box-shadow: 0 0 6px #fbbf24; }
+
+    /* ── Word card target hanzi ─────────────────────────────── */
+    .target-word {
+      font-family: 'Noto Serif SC', serif;
+      font-size: clamp(3rem, 14vw, 5.5rem);
+      font-weight: 700;
+      background: linear-gradient(135deg, #c7d2fe, #818cf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* ── Tab navigation ────────────────────────────────────── */
+    .tab-btn {
+      position: relative;
+      padding: 0.5rem 1rem;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: #64748b;
+      cursor: pointer;
+      transition: color 0.2s ease;
+      border: none;
+      background: transparent;
+      white-space: nowrap;
+    }
+    .tab-btn:hover { color: #94a3b8; }
+    .tab-btn.active {
+      color: #a5b4fc;
+    }
+    .tab-btn.active::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0.5rem;
+      right: 0.5rem;
+      height: 2px;
+      background: linear-gradient(90deg, #6366f1, #818cf8);
+      border-radius: 2px;
+    }
+
+    /* ── Analytics table ───────────────────────────────────── */
+    .analytics-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+    }
+    .analytics-table thead th {
+      font-size: 0.65rem;
+      font-weight: 600;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 0.5rem 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid rgba(129, 140, 248, 0.1);
+    }
+    .analytics-table tbody td {
+      font-size: 0.8rem;
+      padding: 0.6rem 0.75rem;
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+      color: #cbd5e1;
+    }
+    .analytics-table tbody tr {
+      transition: background 0.15s ease;
+    }
+    .analytics-table tbody tr:hover {
+      background: rgba(99, 102, 241, 0.06);
+    }
+
+    /* ── Drill target word (oversized for focused practice) ── */
+    .drill-target-word {
+      font-family: 'Noto Serif SC', serif;
+      font-size: clamp(4rem, 20vw, 8rem);
+      font-weight: 700;
+      background: linear-gradient(135deg, #e0e7ff, #818cf8, #6366f1);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1.1;
+    }
+
+    /* ── Filter pill buttons ───────────────────────────────── */
+    .filter-pill {
+      padding: 0.3rem 0.8rem;
+      font-size: 0.7rem;
+      font-weight: 500;
+      border-radius: 999px;
+      border: 1px solid rgba(129, 140, 248, 0.15);
+      color: #64748b;
+      background: transparent;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .filter-pill:hover {
+      color: #818cf8;
+      border-color: rgba(129, 140, 248, 0.3);
+    }
+    .filter-pill.active {
+      background: rgba(99, 102, 241, 0.15);
+      border-color: rgba(129, 140, 248, 0.5);
+      color: #a5b4fc;
+    }
+  </style>
+</head>
+
+<body class="flex flex-col min-h-dvh">
+
+  <!-- ── Header ──────────────────────────────────────────────────── -->
+  <header class="glass sticky top-0 z-50 px-4 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-2">
+      <span class="text-2xl">🎙️</span>
+      <div>
+        <p class="text-sm font-semibold text-white leading-tight">普通话 MDD</p>
+        <p class="text-xs text-slate-400 leading-tight">Pronunciation Coach</p>
+      </div>
+    </div>
+    <div id="status-bar" class="flex items-center text-xs text-slate-400">
+      <span id="status-dot" class="status-dot offline"></span>
+      <span id="status-text">Connecting…</span>
+    </div>
+  </header>
+
+  <!-- ── Tab Navigation ──────────────────────────────────────────── -->
+  <nav class="sticky top-[52px] z-40 glass border-b border-white/5 flex items-center gap-1 px-4 overflow-x-auto">
+    <button class="tab-btn active" data-tab="sentence">例句练习</button>
+    <button class="tab-btn" data-tab="word-drill">词语训练</button>
+    <button class="tab-btn" data-tab="analytics">统计分析</button>
+  </nav>
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- ══ VIEW 1: SENTENCE STUDY (default) ═════════════════════════ -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <main id="view-sentence" class="flex-1 flex flex-col items-center px-4 py-4 gap-4 max-w-4xl w-full mx-auto md:px-8 pb-32">
+
+    <!-- Demo mode banner -->
+    <div id="demo-banner" class="hidden w-full glass rounded-xl px-4 py-2 text-center text-xs text-amber-300 border border-amber-500/30">
+      ⭐ <strong>Demo Mode</strong> — No cards are marked as "favorited" yet.<br>
+      Star words in your vocabulary app, then restart the server.
+    </div>
+
+    <!-- ── TARGET WORD CARD ──────────────────────────────────────── -->
+    <section id="card-area" class="card-animate w-full glass rounded-2xl p-4 md:p-6 text-center space-y-4">
+      <!-- Shimmer placeholder -->
+      <div id="card-loading" class="space-y-3">
+        <div class="shimmer h-20 rounded-xl w-3/5 mx-auto"></div>
+        <div class="shimmer h-5 rounded-lg w-4/5 mx-auto"></div>
+        <div class="shimmer h-4 rounded-lg w-2/3 mx-auto"></div>
+      </div>
+
+      <!-- Actual card content (hidden until loaded) -->
+      <div id="card-content" class="hidden space-y-4">
+        <!-- Target word (big hanzi) -->
+        <div>
+          <p id="target-word" class="target-word"></p>
+          <p id="target-pinyin" class="mt-1 text-brand-400 text-sm font-medium tracking-widest"></p>
+        </div>
+
+        <!-- Divider -->
+        <div class="border-t border-white/10"></div>
+
+        <!-- SENTENCE display with ruby/pinyin markup -->
+        <div>
+          <!-- Label row -->
+          <div class="flex items-center justify-between mb-2">
+            <p class="text-xs text-slate-500 uppercase tracking-wider">例句</p>
+          </div>
+          <p id="sentence-display" class="sentence-display text-slate-100 leading-relaxed"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── RESULT PANEL (hidden until evaluation complete) ────────── -->
+    <section id="result-panel" class="hidden card-animate w-full glass rounded-2xl p-4 space-y-3">
+      <div class="flex items-center justify-between">
+        <p class="text-sm font-semibold text-white">评估结果</p>
+        <span id="result-badge" class="text-xs font-bold px-3 py-1 rounded-full"></span>
+      </div>
+      <!-- Score bar -->
+      <div>
+        <div class="flex justify-between text-xs text-slate-400 mb-1">
+          <span>准确率</span>
+          <span id="score-pct">—</span>
+        </div>
+        <div class="h-2 bg-surface-700 rounded-full overflow-hidden">
+          <div id="score-bar" class="score-fill" style="width:0%"></div>
+        </div>
+      </div>
+      <!-- Phoneme flags -->
+      <div id="phoneme-flags" class="flex flex-wrap gap-2 text-xs"></div>
+      <!-- Color legend -->
+      <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 pt-2 border-t border-white/5">
+        <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0 inline-block"></span>正确 ≥ 50%</span>
+        <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-red-400 flex-shrink-0 inline-block"></span>需改进 &lt; 50%</span>
+        <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-slate-600 flex-shrink-0 inline-block"></span>未评估</span>
+      </div>
+      <!-- Next SRS info -->
+      <p id="next-review-info" class="text-xs text-slate-500"></p>
+    </section>
+
+    <!-- ── NEXT REVIEW INFO ─────────────────────────────────────────── -->
+    <p id="record-hint" class="text-xs text-slate-500 text-center">Loading card…</p>
+
+    <!-- ── BOTTOM ACTIONS ─────────────────────────────────────────── -->
+    <div class="w-full flex gap-3">
+      <button
+        id="btn-skip"
+        class="btn-glow glass flex-1 py-3 rounded-xl text-sm font-medium text-slate-400"
+        disabled
+      >
+        跳过 ›
+      </button>
+      <button
+        id="btn-next"
+        class="btn-glow glass flex-1 py-3 rounded-xl text-sm font-medium text-brand-400 hidden"
+      >
+        下一题 ›
+      </button>
+    </div>
+
+    <!-- ── SRS STATS FOOTER ──────────────────────────────────────── -->
+    <div id="srs-footer" class="hidden w-full glass rounded-xl px-4 py-3">
+      <p class="text-xs text-slate-500 uppercase tracking-wider mb-2">学习数据</p>
+      <div class="grid grid-cols-3 gap-2 text-center text-xs">
+        <div>
+          <p id="stat-reps" class="text-white font-semibold text-base">—</p>
+          <p class="text-slate-500">复习次数</p>
+        </div>
+        <div>
+          <p id="stat-lapses" class="text-white font-semibold text-base">—</p>
+          <p class="text-slate-500">失误</p>
+        </div>
+        <div>
+          <p id="stat-ease" class="text-white font-semibold text-base">—</p>
+          <p class="text-slate-500">难度</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- ══ VIEW 2: WORD DRILL (focused practice) ════════════════════ -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <main id="view-word-drill" class="hidden flex-1 flex flex-col items-center px-4 py-4 gap-4 max-w-4xl w-full mx-auto md:px-8 pb-32">
+
+    <!-- Filter pills -->
+    <div class="w-full flex items-center gap-2 flex-wrap">
+      <span class="text-xs text-slate-500 uppercase tracking-wider mr-1">过滤:</span>
+      <button class="filter-pill active" data-filter="all">全部</button>
+      <button class="filter-pill" data-filter="shengmu">声母</button>
+      <button class="filter-pill" data-filter="yunmu">韵母</button>
+      <button class="filter-pill" data-filter="tone">声调</button>
+    </div>
+
+    <!-- Drill card -->
+    <section id="drill-card" class="card-animate w-full glass rounded-2xl p-6 md:p-8 text-center space-y-4 min-h-[280px] flex flex-col items-center justify-center">
+      <div id="drill-loading" class="space-y-3 w-full">
+        <div class="shimmer h-24 rounded-xl w-3/5 mx-auto"></div>
+        <div class="shimmer h-5 rounded-lg w-2/5 mx-auto"></div>
+      </div>
+      <div id="drill-content" class="hidden space-y-3 w-full flex flex-col items-center">
+        <p id="drill-target-word" class="drill-target-word"></p>
+        <p id="drill-pinyin" class="text-brand-400 text-lg font-medium tracking-widest"></p>
+        <p id="drill-meaning" class="text-slate-500 text-sm"></p>
+        <!-- per-char color display for word drill results -->
+        <div id="drill-char-display" class="hidden flex items-center justify-center gap-1 mt-4">
+        </div>
+      </div>
+      <div id="drill-empty" class="hidden text-center py-8">
+        <p class="text-slate-500 text-sm">还没有错误数据。</p>
+        <p class="text-slate-600 text-xs mt-1">先在「例句练习」中进行一些练习吧！</p>
+      </div>
+    </section>
+
+    <!-- Drill result panel -->
+    <section id="drill-result-panel" class="hidden card-animate w-full glass rounded-2xl p-4 space-y-3">
+      <div class="flex items-center justify-between">
+        <p class="text-sm font-semibold text-white">词语评估</p>
+        <span id="drill-result-badge" class="text-xs font-bold px-3 py-1 rounded-full"></span>
+      </div>
+      <div>
+        <div class="flex justify-between text-xs text-slate-400 mb-1">
+          <span>准确率</span>
+          <span id="drill-score-pct">—</span>
+        </div>
+        <div class="h-2 bg-surface-700 rounded-full overflow-hidden">
+          <div id="drill-score-bar" class="score-fill" style="width:0%"></div>
+        </div>
+      </div>
+      <div id="drill-phoneme-flags" class="flex flex-wrap gap-2 text-xs"></div>
+    </section>
+
+    <p id="drill-hint" class="text-xs text-slate-500 text-center">Loading drill pool…</p>
+
+    <!-- Drill navigation -->
+    <div class="w-full flex gap-3">
+      <button id="btn-drill-skip" class="btn-glow glass flex-1 py-3 rounded-xl text-sm font-medium text-slate-400" disabled>
+        跳过 ›
+      </button>
+      <button id="btn-drill-next" class="btn-glow glass flex-1 py-3 rounded-xl text-sm font-medium text-brand-400 hidden">
+        下一词 ›
+      </button>
+    </div>
+
+    <!-- Pool counter -->
+    <p id="drill-pool-counter" class="text-xs text-slate-600 text-center"></p>
+  </main>
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- ══ VIEW 3: ANALYTICS DASHBOARD ══════════════════════════════ -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <main id="view-analytics" class="hidden flex-1 flex flex-col items-center px-4 py-4 gap-4 max-w-5xl w-full mx-auto md:px-8 pb-16">
+
+    <div class="w-full flex items-center justify-between">
+      <h1 class="text-sm font-semibold text-white">🏆 Top 20 发音难点</h1>
+      <button id="btn-refresh-analytics" class="text-xs text-brand-400 hover:text-brand-200 transition-colors">
+        刷新 ↻
+      </button>
+    </div>
+
+    <!-- Analytics table -->
+    <section class="w-full glass rounded-2xl overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="analytics-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>词语</th>
+              <th>拼音</th>
+              <th>练习</th>
+              <th>精度</th>
+              <th>声母</th>
+              <th>韵母</th>
+              <th>声调</th>
+              <th>系数</th>
+            </tr>
+          </thead>
+          <tbody id="analytics-table-body">
+            <tr>
+              <td colspan="9" class="text-center text-slate-500 text-sm py-8">正在加载分析数据…</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Summary cards -->
+    <div id="analytics-summary" class="w-full grid grid-cols-2 md:grid-cols-4 gap-3">
+    </div>
+  </main>
+
+  <!-- ── Toast container ──────────────────────────────────────────── -->
+  <div id="toast-container" class="fixed bottom-32 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- ── FLOATING ACTION DOCK ──────────────────────────────────────── -->
+  <div id="floating-dock" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 glass rounded-full px-6 py-3 shadow-2xl flex items-center gap-4 border border-white/10 w-max">
+    <button id="btn-word-audio" class="w-11 h-11 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-brand-300 transition-colors" aria-label="Play word audio">
+      <span id="word-audio-icon">▶</span>
+    </button>
+    <button id="btn-sentence-audio" class="w-11 h-11 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-slate-300 transition-colors" aria-label="Play sentence audio">
+      <span id="sentence-audio-icon">▶</span>
+    </button>
+    <button id="btn-record" class="btn-glow relative w-16 h-16 rounded-full bg-gradient-to-br from-brand-600 to-brand-500 shadow-lg shadow-brand-700/50 flex items-center justify-center mx-2" aria-label="Hold to record pronunciation" disabled>
+      <span id="record-icon" class="text-2xl pointer-events-none select-none">🎙️</span>
+    </button>
+    <button id="btn-pinyin-toggle" class="px-5 py-2 rounded-full bg-white/5 hover:bg-white/10 text-sm font-medium text-slate-300 transition-colors" aria-label="Toggle pinyin display">
+      拼音
+    </button>
+  </div>
+
+  <!-- Hidden audio elements -->
+  <audio id="audio-word"     preload="none"></audio>
+  <audio id="audio-sentence" preload="none"></audio>
+
+  <!-- ── Azure Speech SDK ──────────────────────────────────────────── -->
+  <script src="https://aka.ms/csspeech/jsbrowserpackageraw"></script>
+
+  <!-- ── App Script ───────────────────────────────────────────────── -->
+  <script type="module" src="app.js"></script>
+</body>
+</html>

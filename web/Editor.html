@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="gruvbox">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transcription Editor — Mo-Reader</title>
+
+    <!-- CSS Modules -->
+    <style>
+/* ── css/base.css ── */
+/* ================= UBICACION FISICA DE LOS FONTS ================= */
+@font-face {
+    font-family: "AiDian-QianFengYingBiXingShu";
+    src: url("fonts/dian.ttf") format("truetype");
+}
+@font-face {
+    font-family: "OPPOSans";
+    src: url("fonts/OPPOSans.ttf") format("truetype");
+}
+@font-face {
+    font-family: "TsangerYuYangT W05";
+    src: url("fonts/Tsanger.ttf") format("truetype");
+}
+@font-face {
+    font-family: "Taipei Sans TC Beta";
+    src: url("fonts/Taipei.ttf") format("truetype");
+}
+@font-face {
+    font-family: "zixiaohundanqingxingshu_trial";
+    src: url("fonts/zixiao.ttf") format("truetype");
+}
+
+/* ================= CSS VARIABLES ================= */
+:root {
+    --ui-font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+    --reader-font-family: "Taipei Sans TC Beta", "Microsoft YaHei", sans-serif;
+    --font-size: 28px;
+    --transition-speed: 0.4s;
+    --shadow-sm: 0 4px 10px rgba(0, 0, 0, 0.2);
+    --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+/* 1. MIDNIGHT SLATE */
+:root[data-theme="midnight"] {
+    --bg: #0f172a;
+    --panel-bg: #1e293b;
+    --panel-hover: #334155;
+    --text: #cbd5e1;
+    --next-word: #64748b;
+    --border: #334155;
+    --tooltip-bg: rgba(15, 23, 42, 0.95);
+    --highlight: #38bdf8;
+}
+
+/* 2. OLED BLACK */
+:root[data-theme="oled"] {
+    --bg: #000000;
+    --panel-bg: #121212;
+    --panel-hover: #222222;
+    --text: #e0e0e0;
+    --next-word: #555555;
+    --border: #2a2a2a;
+    --tooltip-bg: rgba(10, 10, 10, 0.98);
+    --highlight: #38bdf8;
+}
+
+/* 3. NORDIC NIGHT */
+:root[data-theme="nordic"] {
+    --bg: #2e3440;
+    --panel-bg: #3b4252;
+    --panel-hover: #434c5e;
+    --text: #d8dee9;
+    --next-word: #7b88a1;
+    --border: #4c566a;
+    --tooltip-bg: rgba(46, 52, 64, 0.98);
+    --highlight: #88c0d0;
+}
+
+/* 4. GRUVBOX */
+:root[data-theme="gruvbox"] {
+    --bg: #000000;
+    --panel-bg: #22201d;
+    --panel-hover: #2c2925;
+    --text: #ebdbb2;
+    --next-word: #a89984;
+    --border: #36322d;
+    --tooltip-bg: rgba(24, 22, 20, 0.98);
+    --highlight: #fe8019;
+}
+
+/* 5. EVERFOREST */
+:root[data-theme="everforest"] {
+    --bg: #000000;
+    --panel-bg: #1c2225;
+    --panel-hover: #272f33;
+    --text: #d3c6aa;
+    --next-word: #859289;
+    --border: #333d42;
+    --tooltip-bg: rgba(22, 26, 28, 0.98);
+    --highlight: #a7c080;
+}
+
+/* ================= GLOBAL LAYOUT ================= */
+body {
+    font-family: var(--ui-font-family);
+    background: var(--bg);
+    color: var(--text);
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+    transition: background var(--transition-speed), color var(--transition-speed);
+}
+
+.app-layout {
+    display: flex;
+    height: 100vh;
+    height: 100dvh;
+    padding: 20px;
+    gap: 20px;
+    box-sizing: border-box;
+}
+
+button {
+    font-family: inherit;
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* ── css/editor.css ── */
+/* ===================================================
+   EDITOR — Premium Gruvbox-themed layout
+   =================================================== */
+
+/* Google Fonts — Noto Serif SC for Chinese body,
+   Inter for all UI chrome                           */
+
+
+/* ── Layout skeleton ── */
+.editor-layout {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    padding: 20px;
+    gap: 16px;
+    box-sizing: border-box;
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
+/* ── Header bar ── */
+.editor-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--panel-bg);
+    padding: 14px 24px;
+    border-radius: 10px;
+    box-shadow:
+        0 1px 0 rgba(255,255,255,0.04) inset,
+        var(--shadow-sm);
+    border: 1px solid var(--border);
+}
+
+.header-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.header-title .app-icon {
+    font-size: 26px;
+    line-height: 1;
+    /* Subtle warm glow on the icon */
+    filter: drop-shadow(0 0 8px rgba(254, 128, 25, 0.5));
+}
+
+.header-title h1 {
+    font-family: 'Inter', var(--ui-font-family);
+    font-size: 18px;
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: -0.01em;
+    color: var(--text);
+}
+
+.header-title .subtitle {
+    font-family: 'Inter', var(--ui-font-family);
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--next-word);
+    margin-left: 4px;
+    opacity: 0.8;
+}
+
+.header-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+/* ── Buttons ── */
+.btn-primary,
+.btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 18px;
+    border-radius: 8px;
+    font-family: 'Inter', var(--ui-font-family);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition:
+        background 0.18s ease,
+        transform 0.15s ease,
+        box-shadow 0.18s ease,
+        filter 0.18s ease;
+    border: none;
+    white-space: nowrap;
+    letter-spacing: 0.01em;
+}
+
+.btn-primary {
+    background: var(--highlight); /* fe8019 — gruvbox orange */
+    color: #1d2021;
+    box-shadow: 0 2px 8px rgba(254, 128, 25, 0.25);
+}
+.btn-primary:hover {
+    filter: brightness(1.12);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(254, 128, 25, 0.35);
+}
+.btn-primary:active { transform: translateY(0); }
+.btn-primary:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+    filter: none;
+}
+
+.btn-secondary {
+    background: rgba(255,255,255,0.06);
+    color: var(--text);
+    border: 1px solid var(--border);
+}
+.btn-secondary:hover {
+    background: var(--panel-hover);
+    border-color: rgba(254,128,25,0.35);
+    transform: translateY(-1px);
+}
+
+/* ── File count badge (shows word count) ── */
+.file-badge {
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--next-word);
+    background: rgba(0,0,0,0.25);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 3px 10px;
+    letter-spacing: 0.03em;
+}
+
+/* ── Main editor frame ── */
+.editor-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: var(--panel-bg);
+    border-radius: 10px;
+    box-shadow:
+        0 1px 0 rgba(255,255,255,0.03) inset,
+        var(--shadow-md);
+    border: 1px solid var(--border);
+    overflow: hidden;
+    position: relative;
+}
+
+/* Thin top accent stripe in gruvbox orange */
+.editor-main::before {
+    content: '';
+    display: block;
+    height: 2px;
+    background: linear-gradient(90deg,
+        transparent 0%,
+        var(--highlight) 30%,
+        rgba(254,128,25,0.3) 70%,
+        transparent 100%);
+    opacity: 0.6;
+}
+
+.textarea-container {
+    flex: 1;
+    display: flex;
+    position: relative;
+}
+
+/* ── The editing textarea ── */
+#editorArea {
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    border: none;
+    padding: 32px 56px;
+    color: var(--text);
+    font-size: 24px;
+    font-family: var(--reader-font-family);
+    line-height: 1.9;          /* comfortable but not chunky for CJK */
+    letter-spacing: 0.02em;
+    resize: none;
+    outline: none;
+    box-sizing: border-box;
+    caret-color: var(--highlight);
+    transition: color 0.3s, background 0.3s;
+}
+
+/* Selection highlight in warm orange */
+#editorArea::selection {
+    background: rgba(254, 128, 25, 0.25);
+    color: var(--text);
+}
+
+/* Scrollbar */
+#editorArea::-webkit-scrollbar { width: 10px; }
+#editorArea::-webkit-scrollbar-track { background: transparent; }
+#editorArea::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 6px;
+    border: 3px solid var(--panel-bg);
+}
+#editorArea::-webkit-scrollbar-thumb:hover {
+    background: var(--next-word);
+}
+
+/* ── Empty state ── */
+.editor-empty-state {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+    color: var(--next-word);
+    pointer-events: none;
+    text-align: center;
+    user-select: none;
+}
+
+.editor-empty-state .empty-icon {
+    font-size: 52px;
+    line-height: 1;
+    opacity: 0.5;
+    /* subtle pulse */
+    animation: idle-pulse 3s ease-in-out infinite;
+}
+
+@keyframes idle-pulse {
+    0%, 100% { transform: scale(1);    opacity: 0.5; }
+    50%       { transform: scale(1.07); opacity: 0.7; }
+}
+
+.editor-empty-state .empty-label {
+    font-family: 'Inter', var(--ui-font-family);
+    font-size: 16px;
+    font-weight: 500;
+    max-width: 300px;
+    line-height: 1.6;
+    opacity: 0.6;
+}
+
+/* ── Footer status bar ── */
+.editor-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 24px;
+    border-top: 1px solid var(--border);
+    background: rgba(0,0,0,0.15);
+}
+
+.footer-hint {
+    font-family: 'Inter', var(--ui-font-family);
+    font-size: 11px;
+    color: var(--next-word);
+    opacity: 0.7;
+    letter-spacing: 0.02em;
+}
+
+/* ── Toast status message ── */
+#statusMsg {
+    position: absolute;
+    bottom: 24px;
+    right: 30px;
+    background: var(--highlight);
+    color: #1d2021;
+    padding: 9px 20px;
+    border-radius: 8px;
+    font-family: 'Inter', var(--ui-font-family);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    pointer-events: none;
+    box-shadow: 0 4px 16px rgba(254,128,25,0.4);
+    z-index: 10;
+}
+
+#statusMsg.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+</style>
+</head>
+<body>
+    <div class="editor-layout">
+
+        <header class="editor-header">
+            <div class="header-title">
+                <span class="app-icon">✍️</span>
+                <h1>Transcription Editor</h1>
+                <span class="subtitle">Mo-Reader</span>
+            </div>
+
+            <div class="header-controls">
+                <span class="file-badge" id="wordCount">No file loaded</span>
+
+                <button class="btn-secondary" id="btnLoad">
+                    <span>📂</span> Load JSON
+                </button>
+                <input type="file" id="fileInput" accept=".json" style="display: none;" />
+
+                <button class="btn-primary" id="btnExport" disabled>
+                    <span>💾</span> Export JSON
+                </button>
+            </div>
+        </header>
+
+        <main class="editor-main">
+            <div class="textarea-container">
+                <textarea id="editorArea" spellcheck="false"></textarea>
+
+                <div class="editor-empty-state" id="emptyState">
+                    <span class="empty-icon">📄</span>
+                    <span class="empty-label">Load a word-timed JSON transcription to begin editing punctuation and paragraphs.</span>
+                </div>
+            </div>
+
+            <footer class="editor-footer">
+                <span class="footer-hint" id="footerHint">Press <kbd style="background:rgba(255,255,255,0.08);border:1px solid var(--border);border-radius:4px;padding:1px 6px;font-size:10px;">Enter ↵</kbd> twice to create a new paragraph segment.</span>
+                <span class="footer-hint" id="charCount"></span>
+            </footer>
+
+            <div id="statusMsg"></div>
+        </main>
+
+    </div>
+
+    <!-- App Logic -->
+    
+<script>
+/* ── js/editor.js ── */
+// DOM Elements
+const btnLoad    = document.getElementById('btnLoad');
+const fileInput  = document.getElementById('fileInput');
+const btnExport  = document.getElementById('btnExport');
+const editorArea = document.getElementById('editorArea');
+const emptyState = document.getElementById('emptyState');
+const statusMsg  = document.getElementById('statusMsg');
+const wordCount  = document.getElementById('wordCount');
+const charCount  = document.getElementById('charCount');
+
+// Global State
+let originalJson = null;
+let spokenWords = [];
+let loadedFileName = "edited_transcription.json";
+
+// Initialization
+function init() {
+    btnLoad.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', handleFileLoad);
+    btnExport.addEventListener('click', handleExport);
+    editorArea.addEventListener('input', updateCharCount);
+}
+
+function handleFileLoad(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    loadedFileName = file.name;
+    // Show filename in the header badge
+    if (wordCount) wordCount.textContent = `📄 ${file.name}`;
+    const reader = new FileReader();
+    
+    reader.onload = (e) => {
+        try {
+            originalJson = JSON.parse(e.target.result);
+            processJsonToText();
+        } catch (err) {
+            console.error("Error parsing JSON:", err);
+            showStatus("Invalid JSON file", true);
+        }
+    };
+    reader.readAsText(file);
+}
+
+function processJsonToText() {
+    emptyState.style.display = 'none';
+    editorArea.style.display = 'block';
+    btnExport.disabled = false;
+    spokenWords = [];
+
+    let sourceWords = [];              // flat list of all word tokens in display order
+    let segmentStartIndices = new Set(); // indices where a new segment begins
+
+    // ── Format 1: { segments: [ { words: [...] } ] }  ← standard Whisper output
+    if (originalJson && originalJson.segments && Array.isArray(originalJson.segments)) {
+        const segsWithWords = originalJson.segments.filter(s => Array.isArray(s.words) && s.words.length > 0);
+        if (segsWithWords.length > 0) {
+            segsWithWords.forEach(seg => {
+                segmentStartIndices.add(sourceWords.length);
+                seg.words.forEach(w => sourceWords.push(w));
+            });
+        }
+    }
+
+    // ── Format 2: { word_segments: [...] }  ← flat timed array
+    if (sourceWords.length === 0 && originalJson && originalJson.word_segments && Array.isArray(originalJson.word_segments)) {
+        segmentStartIndices.add(0);
+        sourceWords = originalJson.word_segments;
+    }
+
+    // ── Format 3: raw array  [{ word, start, end }, ...]
+    if (sourceWords.length === 0 && Array.isArray(originalJson)) {
+        segmentStartIndices.add(0);
+        sourceWords = originalJson;
+    }
+
+    if (sourceWords.length === 0) {
+        showStatus("Could not parse JSON — unknown format", true);
+        btnExport.disabled = true;
+        return;
+    }
+
+    // Build display text and collect spoken (timed) words
+    let fullText = "";
+    sourceWords.forEach((w, idx) => {
+        if (!w || !w.word) return;
+        if (segmentStartIndices.has(idx) && idx > 0) fullText += "\n\n";
+        if (w.start !== undefined) spokenWords.push(w);
+        fullText += w.word;
+    });
+
+    editorArea.value = fullText;
+    updateCharCount();
+    if (wordCount) wordCount.textContent = `📄 ${loadedFileName}  ·  ${spokenWords.length} spoken words`;
+    showStatus('JSON loaded — edit punctuation and paragraph breaks, then Export.');
+}
+
+function handleExport() {
+    if (!originalJson || spokenWords.length === 0) return;
+
+    const editedText = editorArea.value;
+
+    // --- Robust Alignment Logic ---
+    // We walk through `spokenWords` in order. For each spoken word, we search
+    // FORWARD from ptr. Any characters between ptr and the found index form
+    // the "gap" — this gap may contain punctuation the user added/changed, and
+    // newlines the user pressed to split paragraphs.
+    //
+    // KEY FIX: when `indexOf` fails for a word (user deleted it), we STILL
+    // advance ptr by at least 0 and insert the spoken word inline so the
+    // pointer stays valid for future words.
+
+    let newSegments = [];
+    let currentSegment = { start: -1, end: -1, text: "", words: [] };
+    let ptr = 0;
+
+    function flushGap(gap) {
+        // Split on newline groups; each newline group = segment boundary
+        if (!gap) return;
+        const parts = gap.split(/(\n+)/);
+        for (const part of parts) {
+            if (/^\n/.test(part)) {
+                // Paragraph break — close current segment
+                if (currentSegment.words.length > 0) {
+                    newSegments.push(currentSegment);
+                    currentSegment = { start: -1, end: -1, text: "", words: [] };
+                }
+            } else {
+                const punct = part.replace(/\s+/g, "");
+                if (punct) {
+                    currentSegment.words.push({ word: punct });
+                    currentSegment.text += punct;
+                }
+            }
+        }
+    }
+
+    function addSpokenWord(sw) {
+        if (currentSegment.start === -1) currentSegment.start = sw.start;
+        currentSegment.end = sw.end;
+        currentSegment.words.push(sw);
+        currentSegment.text += sw.word;
+    }
+
+    for (let i = 0; i < spokenWords.length; i++) {
+        const sw = spokenWords[i];
+        const idx = editedText.indexOf(sw.word, ptr);
+
+        if (idx !== -1) {
+            // Found the word at the correct position
+            const gap = editedText.substring(ptr, idx);
+            flushGap(gap);
+            addSpokenWord(sw);
+            ptr = idx + sw.word.length;
+        } else {
+            // Word not found (user deleted it). Insert it silently to keep
+            // timeline continuity — don't advance ptr so next search starts
+            // from the same position.
+            console.warn(`Word not found: '${sw.word}' at ptr=${ptr} — inserting without gap.`);
+            addSpokenWord(sw);
+            // ptr stays unchanged; keep scanning from same position
+        }
+    }
+
+    // Handle any trailing text after the last spoken word
+    const tailGap = editedText.substring(ptr);
+    flushGap(tailGap);
+
+    // Push the final segment
+    if (currentSegment.words.length > 0) {
+        newSegments.push(currentSegment);
+    }
+
+    // Reconstruct root JSON (preserve all original top-level fields)
+    const reconstructedJson = { ...originalJson, segments: newSegments };
+
+    // Trigger Download
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(reconstructedJson, null, 2));
+    const a = document.createElement('a');
+    a.setAttribute("href", dataStr);
+
+    let outFileName = loadedFileName;
+    if (!outFileName.startsWith("edited_")) outFileName = "edited_" + outFileName;
+    a.setAttribute("download", outFileName);
+
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    showStatus(`Exported! ${newSegments.length} segment${newSegments.length !== 1 ? 's' : ''} written.`);
+}
+
+function updateCharCount() {
+    if (!charCount) return;
+    const txt = editorArea.value;
+    const chars = txt.replace(/\s/g, '').length;
+    charCount.textContent = chars > 0 ? `${chars.toLocaleString()} chars` : '';
+}
+
+function showStatus(text, isError = false) {
+    statusMsg.textContent = text;
+    statusMsg.style.background = isError ? "#ef4444" : "var(--highlight)";
+    statusMsg.classList.add('show');
+    
+    setTimeout(() => {
+        statusMsg.classList.remove('show');
+    }, 3000);
+}
+
+// Start app
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

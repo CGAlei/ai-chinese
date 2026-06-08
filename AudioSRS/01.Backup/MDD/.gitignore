@@ -1,5 +1,0 @@
-node_modules/
-.env
-mdd_progress.db
-*.db-shm
-*.db-wal
