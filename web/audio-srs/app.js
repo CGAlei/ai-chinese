@@ -555,7 +555,8 @@ const MediaController = {
     }
 
     if (!this.isVoskLoaded) {
-      this.voskModel = await Vosk.createModel('./models/es-model.tar.gz');
+      const modelUrl = new URL('models/es-model.tar.gz', window.location.href).href;
+      this.voskModel = await Vosk.createModel(modelUrl);
       this.voskRecognizer = new this.voskModel.KaldiRecognizer(16000);
       this.voskRecognizer.on("result", (message) => {
         if (message.result.text) this.handleTranscript(message.result.text);
@@ -764,6 +765,7 @@ const SessionManager = {
 
   transition(newState) {
     if (this.state === 'IDLE' && newState !== 'PLAYING_PROMPT') return;
+    if (newState === 'PLAYING_PROMPT' && !this.currentWordObj) return;
     this.state = newState;
 
     if (this.timer) { clearTimeout(this.timer); this.timer = null; }
@@ -842,8 +844,14 @@ const SessionManager = {
     if (dom.welcome) dom.welcome.classList.remove('active');
     if (dom.session) dom.session.classList.add('active');
 
-    await MediaController.init();
-    this.loadCurrentWord();
+    try {
+      await MediaController.init();
+      this.loadCurrentWord();
+    } catch (err) {
+      console.error('[SessionManager] Failed to init session speech/audio:', err);
+      UI.showToast('Error de inicio: ' + err.message, 'error');
+      this.transition('IDLE');
+    }
   },
 
   loadCurrentWord() {
