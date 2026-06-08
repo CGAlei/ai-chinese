@@ -1380,7 +1380,8 @@ async function updateStorageStat() {
 
 async function processJSON(raw) {
   try {
-    let parsed = JSON.parse(raw);
+    var rawParsed = JSON.parse(raw);
+    let parsed = rawParsed;
     if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && Array.isArray(parsed.words)) {
       parsed = parsed.words;
     }
@@ -1396,24 +1397,38 @@ async function processJSON(raw) {
     State.dictionary = parsed.filter(d => Array.isArray(d) && d.length >= 2);
     if (State.dictionary.length === 0) throw new Error();
 
-    // Write dropped dictionary into MoDB so all apps share it
-    let newWords = 0;
-    for (const [hanzi, meaning] of State.dictionary) {
-      const existing = await MoDB.getWord(hanzi);
-      if (!existing || existing.meaning !== meaning) {
-        await MoDB.putWord({
-          id: hanzi,
-          hanzi,
-          pinyin: existing ? existing.pinyin : MoPinyin.getToned(hanzi),
-          pinyinToneless: existing ? existing.pinyinToneless : MoPinyin.getToneless(hanzi),
-          meaning,
-          source: existing ? existing.source : 'cards_import',
-          enriched: existing ? existing.enriched : false,
+    // Write dropped dictionary into MoDB so all apps share it in bulk
+    MoDB.open().then(async function() {
+      var importData = null;
+      if (rawParsed && rawParsed.version === 4 && Array.isArray(rawParsed.words)) {
+        importData = rawParsed;
+      } else {
+        var wordsList = State.dictionary.map(function(e) {
+          var hanzi = e[0];
+          var meaning = e[1];
+          return {
+            id: hanzi,
+            hanzi: hanzi,
+            pinyin: MoPinyin.getToned(hanzi),
+            pinyinToneless: MoPinyin.getToneless(hanzi),
+            meaning: meaning,
+            source: 'cards_import',
+            enriched: false,
+            createdAt: Date.now(),
+            updatedAt: Date.now()
+          };
         });
-        newWords++;
+        importData = {
+          version: 4,
+          words: wordsList
+        };
       }
-    }
-    if (newWords > 0) console.log(`[MoCards] Imported/Updated ${newWords} words in MoDB`);
+      console.log('[MoCards] Bulk importing/updating words in MoDB...');
+      await MoDB.importAll(importData);
+      console.log('[MoCards] Bulk import to MoDB completed successfully!');
+    }).catch(function(e) {
+      console.error('[MoCards] Failed to bulk import to MoDB:', e);
+    });
 
     const badge = document.getElementById('word-count-badge');
     if(badge) {
