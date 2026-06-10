@@ -21,22 +21,29 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Resolve dictionary path: env override → default relative location
 const DICT_PATH = process.env.DICTIONARY_PATH
-  ? path.resolve(process.env.DICTIONARY_PATH)
-  : path.join(__dirname, 'data', 'vocabulary.json');
+  ? path.resolve(__dirname, process.env.DICTIONARY_PATH)
+  : path.resolve(__dirname, '../../web/audio-srs/data/vocabulary.json');
 
 let _allCards    = null;
 let _activeCards = null;
 let _isDemoMode  = false;   // explicit flag — fixes the array-reference comparison bug
+let _lastMtime   = 0;
 
 function loadDictionary() {
-  if (_allCards) return;
-
   if (!fs.existsSync(DICT_PATH)) {
     throw new Error(`Dictionary not found at: ${DICT_PATH}`);
   }
 
+  const stat = fs.statSync(DICT_PATH);
+  const mtime = stat.mtimeMs;
+
+  if (_allCards && mtime === _lastMtime) {
+    return;
+  }
+
   const raw = fs.readFileSync(DICT_PATH, 'utf-8');
   _allCards = JSON.parse(raw);
+  _lastMtime = mtime;
 
   // Primary filter: favorited cards that have a sentence
   const favorited = _allCards.filter(
@@ -46,7 +53,7 @@ function loadDictionary() {
   if (favorited.length > 0) {
     _activeCards = favorited;
     _isDemoMode  = false;
-    console.log(`[Dictionary] Loaded ${favorited.length} favorited cards (with sentences).`);
+    console.log(`[Dictionary] Loaded ${favorited.length} favorited cards (with sentences) from disk.`);
   } else {
     // Demo fallback: first 20 cards that have a sentence
     const withSentence = _allCards.filter(
@@ -272,4 +279,46 @@ export function findMinimalPair(targetHanzi, charIndex, errorType) {
     }
   }
   return null;
+}
+
+/**
+ * Toggles the favorited status of a card in the master JSON dictionary on disk.
+ * Updates both the memory cache and the file.
+ *
+ * @param {string} wordId - The target word/card ID to toggle
+ * @returns {boolean|null} The new favorited status, or null if card not found
+ */
+export function toggleCardFavorite(wordId) {
+  loadDictionary();
+  const card = _allCards.find(c => c.id === wordId || c.hanzi === wordId);
+  if (!card) return null;
+
+  card.favorited = !card.favorited;
+
+  try {
+    fs.writeFileSync(DICT_PATH, JSON.stringify(_allCards, null, 2), 'utf-8');
+    _lastMtime = fs.statSync(DICT_PATH).mtimeMs;
+    console.log(`[Dictionary] Successfully toggled favorite for '${wordId}' to ${card.favorited}`);
+  } catch (err) {
+    console.error(`[Dictionary] Failed to write updated favorite to ${DICT_PATH}:`, err);
+    throw err;
+  }
+
+  // Re-filter active cards to update study queue instantly
+  const favorited = _allCards.filter(
+    (c) => c.favorited === true && c.sentenceText && c.sentenceText.trim() !== ''
+  );
+
+  if (favorited.length > 0) {
+    _activeCards = favorited;
+    _isDemoMode = false;
+  } else {
+    const withSentence = _allCards.filter(
+      (c) => c.sentenceText && c.sentenceText.trim() !== ''
+    );
+    _activeCards = withSentence.slice(0, 20);
+    _isDemoMode = true;
+  }
+
+  return card.favorited;
 }

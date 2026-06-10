@@ -64,6 +64,7 @@ const recordHint       = document.getElementById('record-hint');
 const btnSkip          = document.getElementById('btn-skip');
 const btnNext          = document.getElementById('btn-next');
 const btnPinyinToggle  = document.getElementById('btn-pinyin-toggle');
+const btnFavoriteCard  = document.getElementById('btn-favorite-card');
 const srsFooter        = document.getElementById('srs-footer');
 const statReps         = document.getElementById('stat-reps');
 const statLapses       = document.getElementById('stat-lapses');
@@ -260,6 +261,7 @@ async function loadCard() {
     // Render word
     targetWord.textContent    = currentCard.hanzi;
     targetPinyin.textContent  = currentCard.pinyin || '';
+    updateFavoriteBtnState(currentCard.favorited);
 
     // Render sentence
     renderSentence(currentCard.sentenceText);
@@ -753,6 +755,40 @@ btnSkip.addEventListener('click', () => {
 
 btnNext.addEventListener('click', () => {
   loadCard();
+});
+
+// ─── Favorite button toggling ────────────────────────────────────────────────
+
+function updateFavoriteBtnState(isFavorited) {
+  if (!btnFavoriteCard) return;
+  if (isFavorited) {
+    btnFavoriteCard.textContent = '★';
+    btnFavoriteCard.classList.remove('text-slate-400');
+    btnFavoriteCard.classList.add('text-amber-400');
+  } else {
+    btnFavoriteCard.textContent = '☆';
+    btnFavoriteCard.classList.remove('text-amber-400');
+    btnFavoriteCard.classList.add('text-slate-400');
+  }
+}
+
+btnFavoriteCard?.addEventListener('click', async () => {
+  if (!currentCard) return;
+  try {
+    const res = await fetch(`${API}/api/toggle-favorite`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ word_id: currentCard.id })
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+    currentCard.favorited = data.favorited;
+    updateFavoriteBtnState(currentCard.favorited);
+    showToast(currentCard.favorited ? '❤️ Added to favorites' : '🤍 Removed from favorites', 'success', 1500);
+  } catch (err) {
+    console.error('[toggle-favorite]', err);
+    showToast('Failed to toggle favorite: ' + err.message, 'error');
+  }
 });
 
 // ─── Tab switching ───────────────────────────────────────────────────────────

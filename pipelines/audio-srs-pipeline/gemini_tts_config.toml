@@ -69,5 +69,13 @@ f5_cfg_strength = 2.0
 f5_sway_sampling_coef = -1.0
 
 # ── Paths ─────────────────────────────────────────────────────────────────
-audio_dir = "audio"
-sent_dir = "sentences"
+audio_dir = "../../web/audio-srs/audio"
+sent_dir = "../../web/audio-srs/sentences"
+vocab_file = "../../web/audio-srs/data/vocabulary.json"
+
+# ── Azure TTS config ──────────────────────────────────────────────────────
+tts_provider = "azure"
+azure_voice_name = "zh-CN-XiaoxiaoNeural"
+llm_provider = "openrouter"
+openrouter_model = "google/gemini-2.5-flash"
+

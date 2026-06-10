@@ -967,6 +967,23 @@ const SessionManager = {
     UI.updateFavoriteButton(ud.favorited);
     const msg = ud.favorited ? '❤️ Añadido a favoritos' : '🤍 Eliminado de favoritos';
     UI.showToast(msg, 'info', 1200);
+
+    // Call MDD API in background to sync favorite status to master JSON on disk
+    fetch('http://localhost:3000/api/toggle-favorite', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ word_id: id })
+    })
+    .then(res => {
+      if (!res.ok) {
+        console.warn('Failed to sync favorite status to MDD server:', res.statusText);
+      } else {
+        console.log('Successfully synced favorite status to MDD server for:', id);
+      }
+    })
+    .catch(err => {
+      console.warn('MDD server offline or unreachable. Favorite synced locally only.', err);
+    });
   },
 
   hideCurrentWord() {

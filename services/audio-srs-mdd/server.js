@@ -21,7 +21,7 @@ import { fileURLToPath } from 'url';
 import { pinyin, convert } from 'pinyin-pro';
 
 import db from './db.js';
-import { getNextCard, getTotalActiveCards, findCardByHanzi, findMinimalPair } from './dictionary.js';
+import { getNextCard, getTotalActiveCards, findCardByHanzi, findMinimalPair, toggleCardFavorite } from './dictionary.js';
 import { scoreToQuality, computeNextSRS } from './srs.js';
 import { extractPhonemeErrors } from './phoneme-utils.js';
 
@@ -103,6 +103,23 @@ app.get('/api/health', (_req, res) => {
     dbPath: 'mdd_progress.db',
     timestamp: Date.now(),
   });
+});
+
+app.post('/api/toggle-favorite', (req, res) => {
+  try {
+    const { word_id } = req.body;
+    if (!word_id) {
+      return res.status(400).json({ error: 'Missing word_id parameter' });
+    }
+    const isFav = toggleCardFavorite(word_id);
+    if (isFav === null) {
+      return res.status(404).json({ error: `Card '${word_id}' not found` });
+    }
+    res.json({ status: 'ok', word_id, favorited: isFav });
+  } catch (err) {
+    console.error('[/api/toggle-favorite]', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.get('/api/minimal-pair', (req, res) => {
